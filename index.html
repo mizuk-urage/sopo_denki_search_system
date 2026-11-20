@@ -3,71 +3,138 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#124e43">
+  <meta name="theme-color" content="#FF922B">
   <meta name="description" content="学園祭の企画を番号・名前・テント番号などで探すオフライン検索試作">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="企画検索">
+  <meta name="apple-mobile-web-app-title" content="sopo_denki_search_system">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
   <link rel="stylesheet" href="styles.css">
-  <title>企画検索</title>
+  <title>使い方と導入案内 - sopo_denki_search_system</title>
 </head>
-<body>
+<body class="guide-page">
   <main class="shell">
     <header>
-      <p class="eyebrow">資料を登録して使う · オフライン対応</p>
-      <h1>企画を探す</h1>
-      <p class="intro">企画番号、企画名、キーワード、テント番号などを入力してください。</p>
-      <section id="install-card" class="install-card" aria-label="アプリの追加">
-        <strong id="install-title">このアプリをスマートフォンに追加</strong>
-        <p id="install-help">ホーム画面に追加すると、次からアイコンで開けます。</p>
-        <div class="install-actions"><button id="install-app" class="install-button" type="button" hidden>アプリをインストール</button><button id="share-app" class="share-button" type="button">リンクを共有</button></div>
-        <p id="install-status" class="install-status" aria-live="polite"></p>
-      </section>
+      <p class="eyebrow">電気担当向けオフライン企画検索システム</p>
+      <h1>導入の方法と使い方</h1>
+      <p class="app-version">バージョン 1.0.34</p>
+      <p class="intro">企画番号、企画名、キーワード、テント番号などの電力シートに記載してあるあらゆる情報から企画を検索できます</p>
     </header>
-    <section class="search-panel" aria-label="検索">
-      <nav class="main-tabs" aria-label="表示切替"><button id="projects-tab" class="tab active" type="button">企画を探す</button><button id="documents-tab" class="tab" type="button">資料・登録状況</button></nav>
-      <div id="project-search">
-      <label for="query">検索語</label>
-      <div class="search-row">
-        <input id="query" type="search" placeholder="例：002、コピカツ、C4" autocomplete="off">
-        <button id="clear" type="button" aria-label="検索語を消去">消去</button>
+
+    <section id="guide-panel" class="guide-panel" aria-label="使い方の説明">
+      <div class="guide-intro-card">
+        <h2>Sopo Denki Search System とは</h2>
+        <p>雙峰祭中、企画の確認を迅速に得るためのオフライン検索ツールです。あらかじめ、スマートフォンやPCに電力シートと配線図を登録しておくことで、オフラインで企画情報・電力シート・配線図にアクセスできます。</p>
       </div>
-      <div class="filters" role="group" aria-label="場所">
-        <button class="filter active" data-filter="all" type="button" aria-pressed="true">すべて</button>
-        <button class="filter" data-filter="indoor" type="button" aria-pressed="false">屋内</button>
-        <button class="filter" data-filter="outdoor" type="button" aria-pressed="false">屋外</button>
-      </div>
-      <p id="status" class="status" aria-live="polite"></p>
-      </div>
-      <div id="document-search" hidden>
-        <p class="intro">各資料はこの端末だけに保存されます。登録済みの枠に新しいPDFを選ぶと差し替わります。</p>
-        <section class="upload-slots" aria-labelledby="upload-slots-title">
-          <h2 id="upload-slots-title">資料の登録状況</h2>
-          <div class="upload-slot-grid">
-            <article class="upload-slot" data-upload-slot="wiring-indoor"><h3>配線図 · 屋内</h3><p class="slot-current" id="slot-status-wiring-indoor">読み込み中…</p><input id="slot-file-wiring-indoor" class="slot-file-input" type="file" accept=".pdf,application/pdf" data-slot="wiring-indoor"><label class="slot-file-label" for="slot-file-wiring-indoor">PDFを選ぶ</label></article>
-            <article class="upload-slot" data-upload-slot="wiring-outdoor"><h3>配線図 · 屋外</h3><p class="slot-current" id="slot-status-wiring-outdoor">読み込み中…</p><input id="slot-file-wiring-outdoor" class="slot-file-input" type="file" accept=".pdf,application/pdf" data-slot="wiring-outdoor"><label class="slot-file-label" for="slot-file-wiring-outdoor">PDFを選ぶ</label></article>
-            <article class="upload-slot" data-upload-slot="power-indoor"><h3>電力シート · 屋内</h3><p class="slot-current" id="slot-status-power-indoor">読み込み中…</p><input id="slot-file-power-indoor" class="slot-file-input" type="file" accept=".pdf,application/pdf" data-slot="power-indoor"><label class="slot-file-label" for="slot-file-power-indoor">PDFを選ぶ</label></article>
-            <article class="upload-slot" data-upload-slot="power-outdoor"><h3>電力シート · 屋外</h3><p class="slot-current" id="slot-status-power-outdoor">読み込み中…</p><input id="slot-file-power-outdoor" class="slot-file-input" type="file" accept=".pdf,application/pdf" data-slot="power-outdoor"><label class="slot-file-label" for="slot-file-power-outdoor">PDFを選ぶ</label></article>
+
+      <div class="guide-steps">
+        <article class="guide-step-card">
+          <div class="step-badge">STEP 1</div>
+          <h3>アプリをホーム画面に追加（推奨）</h3>
+          <p class="step-desc"><strong>現場でオフライン利用するため、ホーム画面に追加してからご利用ください。</strong>追加後は、ホーム画面のアイコンから直接検索画面が開きます。</p>
+          <div class="guide-device-tips">
+            <div class="device-tip">
+              <strong>iPhone / iPad (Safari)</strong>
+              <p>画面下の共有ボタン（四角から上矢印）をタップし、メニューから<strong>「ホーム画面に追加」</strong>を選びます。</p>
+            </div>
+            <div class="device-tip">
+              <strong>Android (Chrome)</strong>
+              <p>下のボタンを押すか、右上のメニュー（︙）から<strong>「アプリをインストール」</strong>または<strong>「ホーム画面に追加」</strong>を選びます。</p>
+            </div>
+            <div class="device-tip">
+              <strong>PC (Chrome / Edge)</strong>
+              <p>アドレスバー右端の<strong>インストールアイコン</strong>（またはブラウザーメニューの「アプリとしてインストール」）をクリックします。</p>
+            </div>
           </div>
-          <p id="upload-status" class="status" aria-live="polite"></p>
-        </section>
-        <label for="doc-query">資料の検索</label><input id="doc-query" type="search" placeholder="資料名、種類、エリア、キーワード" autocomplete="off">
-        <p id="doc-count" class="status" aria-live="polite"></p>
-        <section id="import-review" class="import-review" hidden aria-label="電力シートから読み取った企画">
-          <button id="create-project-pages" class="save-doc" type="button">確認した内容で企画ページを作成</button>
-          <h2>企画ページの内容を確認</h2>
-          <p class="meta">読み取った企画名・番号などを確認し、必要なら直してから作成してください。元PDFの該当ページも各企画ページに表示されます。</p>
-          <div id="import-preview" class="import-preview"></div>
-          <button id="cancel-project-pages" class="cancel-doc" type="button">今回は登録しない</button>
-        </section>
+          <div class="guide-install-actions">
+            <button id="guide-install-app" class="install-button" type="button" hidden>アプリをインストール</button>
+            <button id="guide-share-app" class="share-button" type="button">このページのリンクを共有</button>
+          </div>
+          <p id="guide-install-status" class="install-status" aria-live="polite"></p>
+        </article>
+
+        <article class="guide-step-card">
+          <div class="step-badge">STEP 2</div>
+          <h3>電力シート・配線図を登録する</h3>
+          <p class="step-desc">検索画面の<strong>「資料の登録」タブ</strong>からPDFファイルを登録します。</p>
+          <ul class="guide-list">
+            <li><strong>電力シート</strong>: PDFから企画情報（番号・企画名・許可電力など）を自動抽出し、企画ページを作成します。</li>
+            <li><strong>配線図</strong>: 登録すると企画名のあるページを自動検出し、企画詳細から直接該当ページが開きます。</li>
+          </ul>
+          <p class="step-note">※登録した資料はこの端末のブラウザー内だけに安全に保存され、外部サーバーへ送信されることはありません。</p>
+        </article>
+
+        <article class="guide-step-card">
+          <div class="step-badge">STEP 3</div>
+          <h3>企画を検索する</h3>
+          <p class="step-desc">「企画を探す」タブで、企画番号・企画名・テント番号・教室名などから瞬時に検索できます。企画個別ページでは電力シート内の企画情報、電力シートの原本、配線図が確認できます。配線図、電力シートは、左右スワイプで前後の図を確認できます。</p>
+        </article>
+      </div>
+
+      <div class="guide-footer-actions">
+        <a class="enter-app-button" href="search.html">検索画面を開く →</a>
       </div>
     </section>
-    <section id="results" class="results" aria-label="検索結果"></section>
-    <footer>初回はオンラインで開いて保存が終わるのを待ってください。その後はPC・スマートフォンともオフラインで使えます。画面から追加した資料は登録したブラウザー内に保存されます。</footer>
+
+    <footer>初回はオンラインで開いて保存が終わるのを待ってください。その後はPC・スマートフォンともオフラインで使えます。画面から追加した資料は登録したブラウザー内に保存されます。<div class="update-app-control"><button id="update-app" class="update-app-button" type="button">最新バージョンを取得</button><p id="update-app-status" class="update-app-status" aria-live="polite"></p></div></footer>
   </main>
-  <script type="module" src="pdf-import.js"></script>
-  <script src="app.js" defer></script>
+  <script>
+    let installPromptEvent = null;
+    const installBtn = document.querySelector("#guide-install-app");
+    const statusEl = document.querySelector("#guide-install-status");
+    window.addEventListener("beforeinstallprompt", event => {
+      event.preventDefault();
+      installPromptEvent = event;
+      if (installBtn) installBtn.hidden = false;
+    });
+    installBtn?.addEventListener("click", async () => {
+      if (!installPromptEvent) return;
+      await installPromptEvent.prompt();
+      const choice = await installPromptEvent.userChoice;
+      if (statusEl) {
+        statusEl.textContent = choice.outcome === "accepted" ? "インストールを開始しました。" : "インストールはキャンセルされました。";
+      }
+      installPromptEvent = null;
+      installBtn.hidden = true;
+    });
+    document.querySelector("#guide-share-app")?.addEventListener("click", async () => {
+      try {
+        if (navigator.share) await navigator.share({ title: document.title, text: "学園祭 企画検索", url: location.href.split("#")[0] });
+        else { await navigator.clipboard.writeText(location.href.split("#")[0]); if (statusEl) statusEl.textContent = "リンクをコピーしました。"; }
+      } catch (e) { if (e.name !== "AbortError" && statusEl) statusEl.textContent = "リンクを共有できませんでした。"; }
+    });
+    document.querySelector("#update-app")?.addEventListener("click", async event => {
+      const button = event.currentTarget;
+      const updateStatus = document.querySelector("#update-app-status");
+      if (!("serviceWorker" in navigator) || !location.protocol.startsWith("http")) {
+        updateStatus.textContent = "HTTPSで公開した画面で確認できます。";
+        return;
+      }
+      button.disabled = true;
+      updateStatus.textContent = "最新版を確認しています…";
+      let reloaded = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (!reloaded) { reloaded = true; location.reload(); }
+      }, { once: true });
+      try {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (!registration) throw new Error("Service Worker is not registered");
+        await registration.update();
+        updateStatus.textContent = registration.installing || registration.waiting ? "新しい版を取得しました。画面を更新します…" : "すでに最新版、または公開処理中です。少し待ってもう一度お試しください。";
+      } catch (error) {
+        updateStatus.textContent = "最新版を確認できませんでした。通信状況を確認してください。";
+      } finally { button.disabled = false; }
+    });
+    if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("service-worker.js", { updateViaCache: "none" }).then(() => {
+        let refreshed = false;
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          if (!refreshed) { refreshed = true; location.reload(); }
+        });
+      }).catch(console.warn));
+    }
+  </script>
 </body>
 </html>

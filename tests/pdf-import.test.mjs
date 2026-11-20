@@ -17,7 +17,14 @@ globalThis.ImageData ||= class {};
 globalThis.window = {};
 
 await import(pathToFileURL(path.join(root, "pdf-import.js")));
-const { extractPowerSheet } = await globalThis.window.FestivalPdfImportReady;
+const { extractPowerSheet, splitPowerColumns } = await globalThis.window.FestivalPdfImportReady;
+
+const powerHeading = { x: 40, value: "使用許可電力" };
+const split = splitPowerColumns([
+  { y: 500, items: [powerHeading, { x: 300, value: "使用系統" }] },
+  { y: 470, items: [{ x: 85, value: "1800" }, { x: 325, value: "青 1" }] }
+], powerHeading);
+assert.deepEqual(split, { approvedPower: "1800", powerDetails: "青 1" }, "power-sheet columns use the usage-system heading as their divider");
 
 const fixtures = [
   ["indoor", "電力シート_屋内_1エリ.pdf", 22],

@@ -1,5 +1,5 @@
-const CACHE = "festival-search-v12";
-const CORE_FILES = ["./", "./index.html", "./styles.css", "./app.js", "./pdf-import.js", "./vendor/pdfjs/pdf.min.js", "./vendor/pdfjs/pdf.worker.min.js", "./vendor/pdfjs/assets.json", "./manifest.webmanifest", "./icons/icon-180.png", "./icons/icon-192.png", "./icons/icon-512.png", "./data/data.json"];
+const CACHE = "festival-search-v48";
+const CORE_FILES = ["./", "./index.html", "./search.html", "./project.html", "./recover.html", "./styles.css", "./app.js", "./pdf-import.js", "./vendor/pdfjs/pdf.min.js", "./vendor/pdfjs/pdf.worker.min.js", "./vendor/pdfjs/assets.json", "./manifest.webmanifest", "./icons/icon-180.png", "./icons/icon-192.png", "./icons/icon-512.png", "./data/data.json"];
 
 self.addEventListener("install", event => event.waitUntil((async () => {
   const cache = await caches.open(CACHE);
@@ -23,16 +23,30 @@ self.addEventListener("install", event => event.waitUntil((async () => {
     return url.href;
   }))];
   await cache.addAll(pdfs);
+  await self.skipWaiting();
 })()));
 
-self.addEventListener("activate", event => event.waitUntil(caches.keys().then(keys =>
-  Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key)))
-)));
+self.addEventListener("activate", event => event.waitUntil((async () => {
+  const keys=await caches.keys();
+  await Promise.all(keys.filter(key => key.startsWith("festival-search-") && key !== CACHE).map(key => caches.delete(key)));
+  await self.clients.claim();
+})()));
 
-self.addEventListener("fetch", event => event.respondWith(caches.match(event.request).then(cached => cached || fetch(event.request).then(response => {
+self.addEventListener("fetch", event => event.respondWith((async () => {
+  if (event.request.mode === "navigate") {
+    try {
+      const response=await fetch(event.request);
+      if (response.ok) caches.open(CACHE).then(cache => cache.put(event.request, response.clone()));
+      return response;
+    } catch (error) {
+      return (await caches.match(event.request)) || caches.match(new URL("./index.html", self.registration.scope).href);
+    }
+  }
+  return caches.match(event.request).then(cached => cached || fetch(event.request).then(response => {
   if (event.request.method === "GET" && new URL(event.request.url).origin === self.location.origin) {
     const copy = response.clone();
     caches.open(CACHE).then(cache => cache.put(event.request, copy));
   }
   return response;
-}))));
+  }));
+})()));
