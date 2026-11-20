@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#124e43">
+  <meta name="description" content="学園祭の企画を番号・名前・テント番号などで探すオフライン検索試作">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="企画検索">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+  <link rel="stylesheet" href="styles.css">
+  <title>企画検索</title>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <p class="eyebrow">第一エリア · オフライン試作</p>
+      <h1>企画を探す</h1>
+      <p class="intro">企画番号、企画名、キーワード、テント番号などを入力してください。</p>
+      <section id="install-card" class="install-card" aria-label="アプリの追加">
+        <strong id="install-title">このアプリをスマートフォンに追加</strong>
+        <p id="install-help">ホーム画面に追加すると、次からアイコンで開けます。</p>
+        <div class="install-actions"><button id="install-app" class="install-button" type="button" hidden>アプリをインストール</button><button id="share-app" class="share-button" type="button">リンクを共有</button></div>
+        <p id="install-status" class="install-status" aria-live="polite"></p>
+      </section>
+    </header>
+    <section class="search-panel" aria-label="検索">
+      <nav class="main-tabs" aria-label="表示切替"><button id="projects-tab" class="tab active" type="button">企画を探す</button><button id="documents-tab" class="tab" type="button">資料を探す・追加</button></nav>
+      <div id="project-search">
+      <label for="query">検索語</label>
+      <div class="search-row">
+        <input id="query" type="search" placeholder="例：002、コピカツ、C4" autocomplete="off">
+        <button id="clear" type="button" aria-label="検索語を消去">消去</button>
+      </div>
+      <div class="filters" role="group" aria-label="場所">
+        <button class="filter active" data-filter="all" type="button" aria-pressed="true">すべて</button>
+        <button class="filter" data-filter="indoor" type="button" aria-pressed="false">屋内</button>
+        <button class="filter" data-filter="outdoor" type="button" aria-pressed="false">屋外</button>
+      </div>
+      <p id="status" class="status" aria-live="polite"></p>
+      </div>
+      <div id="document-search" hidden>
+        <p class="intro">資料と企画ページはこの端末だけに保存されます。GitHub Pages上のプログラムや、ほかの利用者の資料は変更されません。</p>
+        <label for="doc-query">資料の検索</label><input id="doc-query" type="search" placeholder="資料名、種類、エリア、キーワード" autocomplete="off">
+        <p id="doc-count" class="status" aria-live="polite"></p>
+        <details id="doc-management" class="doc-management">
+          <summary>＋ 資料を追加・差し替え・削除</summary>
+          <div class="management-body">
+            <p class="meta">操作はこのブラウザー内だけに反映されます。削除時は確認が表示されます。</p>
+            <label for="doc-mode">操作</label>
+            <select id="doc-mode" class="management-select"><option value="add">資料を追加</option><option value="replace">登録済み資料と差し替え</option></select>
+            <div id="replace-target-wrap" hidden><label for="replace-target">差し替える資料</label><select id="replace-target" class="management-select"></select></div>
+            <form id="upload-form" class="upload-form">
+              <label>資料の種類<select id="doc-type" required><option value="電力シート">電力シート</option><option value="配線図">配線図</option><option value="企画一覧">企画一覧</option><option value="その他">その他</option></select></label>
+              <label>対象エリア<input id="doc-area" list="area-options" value="全エリア" placeholder="例：全エリア、第一エリア、屋内"><datalist id="area-options"><option value="全エリア"><option value="第一エリア"><option value="第二エリア"><option value="第三エリア"><option value="屋内"><option value="屋外"><option value="指定なし"></datalist></label>
+              <label>資料ファイル<input id="doc-file" type="file" accept=".pdf,.xlsx,.csv,.txt,.json,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/plain,application/json" required></label>
+              <label>追加の検索キーワード<textarea id="doc-terms" rows="3" placeholder="文字情報がないスキャンPDFなどは、企画名や番号を入力してください"></textarea></label>
+              <button id="upload-submit" type="submit" class="save-doc">この端末に追加</button><p id="upload-status" class="status" aria-live="polite"></p>
+            </form>
+            <div class="delete-doc-panel"><label for="delete-target">削除する端末内資料</label><select id="delete-target" class="management-select"></select><button id="delete-doc" type="button" class="small-danger">選択した資料を削除</button></div>
+          </div>
+        </details>
+        <section id="import-review" class="import-review" hidden aria-label="電力シートから読み取った企画">
+          <h2>企画ページの内容を確認</h2>
+          <p class="meta">読み取った企画名・番号などを確認し、必要なら直してから作成してください。元PDFの該当ページも各企画ページに表示されます。</p>
+          <div id="import-preview" class="import-preview"></div>
+          <button id="cancel-project-pages" class="cancel-doc" type="button">今回は登録しない</button>
+          <button id="create-project-pages" class="save-doc" type="button">確認した内容で企画ページを作成</button>
+        </section>
+      </div>
+    </section>
+    <section id="results" class="results" aria-label="検索結果"></section>
+    <footer>初回はオンラインで開いて保存が終わるのを待ってください。その後はPC・スマートフォンともオフラインで使えます。画面から追加した資料は登録したブラウザー内に保存されます。</footer>
+  </main>
+  <script type="module" src="pdf-import.js"></script>
+  <script src="app.js" defer></script>
+</body>
+</html>
