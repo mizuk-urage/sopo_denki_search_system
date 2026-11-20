@@ -52,7 +52,7 @@ document.querySelector("#share-app").addEventListener("click", async () => {
   } catch (error) { if (error.name !== "AbortError") installStatus.textContent = "リンクを共有できませんでした。ブラウザーのアドレスをコピーしてください。"; }
 });
 if(location.protocol==="file:"){
-  document.querySelector("#upload-submit").disabled=true;
+  document.querySelectorAll(".slot-file-input").forEach(input=>input.disabled=true);
   uploadStatus.textContent="資料の登録にはGitHub PagesなどHTTPSのURLで開いてください。この単体HTMLは検索・閲覧用です。";
 }
 let documentResults = document.querySelector("#document-results");
@@ -60,6 +60,12 @@ const localDocuments = [];
 let pendingProjectImport = [];
 let pendingDocument = null;
 const generatedStorageKey = "festival-search-generated-projects-v1";
+const uploadSlots = [
+  {id:"wiring-indoor",type:"配線図",area:"屋内",areaKey:"indoor"},
+  {id:"wiring-outdoor",type:"配線図",area:"屋外",areaKey:"outdoor"},
+  {id:"power-indoor",type:"電力シート",area:"屋内",areaKey:"indoor"},
+  {id:"power-outdoor",type:"電力シート",area:"屋外",areaKey:"outdoor"}
+];
 
 const dbReady = typeof indexedDB === "undefined" ? Promise.reject(new Error("このブラウザーでは端末保存を使えません")) : new Promise((resolve, reject) => {
   const request = indexedDB.open("festival-search-local", 1);
@@ -68,20 +74,6 @@ const dbReady = typeof indexedDB === "undefined" ? Promise.reject(new Error("こ
 });
 dbReady.catch(() => {});
 function dbAction(mode, action, value) { return dbReady.then(db => new Promise((resolve, reject) => { const tx = db.transaction("documents", mode); const req = action === "getAll" ? tx.objectStore("documents").getAll() : tx.objectStore("documents")[action](value); req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error); })).catch(error => { throw new Error(error?.message || "端末保存を利用できません。HTTPSのアプリとして開いてください。"); }); }
-async function xlsxText(file) {
-  const bytes = new Uint8Array(await file.arrayBuffer()), view = new DataView(bytes.buffer);
-  const decoder = new TextDecoder(); let end = -1;
-  for(let i=bytes.length-22;i>=Math.max(0,bytes.length-65557);i--) if(view.getUint32(i,true)===0x06054b50){end=i;break;}
-  if(end<0) throw new Error("Excelファイルを読み取れません");
-  const entries=new Map(), count=view.getUint16(end+10,true); let p=view.getUint32(end+16,true);
-  for(let i=0;i<count;i++){if(view.getUint32(p,true)!==0x02014b50)break;const method=view.getUint16(p+10,true),size=view.getUint32(p+20,true),nameLen=view.getUint16(p+28,true),extraLen=view.getUint16(p+30,true),commentLen=view.getUint16(p+32,true),offset=view.getUint32(p+42,true),name=decoder.decode(bytes.slice(p+46,p+46+nameLen));entries.set(name,{method,size,offset});p+=46+nameLen+extraLen+commentLen;}
-  async function xml(path){const e=entries.get(path);if(!e)return "";const n=e.offset+30+view.getUint16(e.offset+26,true)+view.getUint16(e.offset+28,true),compressed=bytes.slice(n,n+e.size);if(e.method===0)return decoder.decode(compressed);if(e.method!==8||!globalThis.DecompressionStream)throw new Error("この端末ではExcelの圧縮形式を開けません");const stream=new Blob([compressed]).stream().pipeThrough(new DecompressionStream("deflate-raw"));return await new Response(stream).text();}
-  const sharedXml=await xml("xl/sharedStrings.xml"), shared=sharedXml?Array.from(new DOMParser().parseFromString(sharedXml,"application/xml").getElementsByTagName("si"),si=>si.textContent):[];
-  let sheet="xl/worksheets/sheet1.xml";const workbook=await xml("xl/workbook.xml"),rels=await xml("xl/_rels/workbook.xml.rels");
-  if(workbook&&rels){const wdoc=new DOMParser().parseFromString(workbook,"application/xml"),rdoc=new DOMParser().parseFromString(rels,"application/xml"),first=wdoc.getElementsByTagName("sheet")[0],rid=first?.getAttribute("r:id");const rel=Array.from(rdoc.getElementsByTagName("Relationship")).find(x=>x.getAttribute("Id")===rid);if(rel){const target=rel.getAttribute("Target").replace(/^\//,"");sheet=target.startsWith("xl/")?target:`xl/${target}`;}}
-  const sheetXml=await xml(sheet);if(!sheetXml)throw new Error("Excelのシートを見つけられません");const doc=new DOMParser().parseFromString(sheetXml,"application/xml");
-  return Array.from(doc.getElementsByTagName("c"),cell=>{const type=cell.getAttribute("t"),v=cell.getElementsByTagName("v")[0]?.textContent||"";if(type==="s")return shared[Number(v)]||"";if(type==="inlineStr")return cell.getElementsByTagName("is")[0]?.textContent||"";return v;}).filter(Boolean).join(" ");
-}
 function staticDocuments() {
   const docs = new Map();
   state.records.forEach(record => (record.references || []).forEach(ref => {
@@ -96,25 +88,11 @@ function renderDocuments() {
   document.querySelector("#doc-count").textContent=`${docs.length}件の資料`;
   documentResults.innerHTML=docs.length?docs.map(d=>{ const href=d.url || `data/${encodeURIComponent(d.file).replace(/%2F/g,"/")}`; const pages=d.pages?.size?` · 該当ページ ${[...d.pages].sort((a,b)=>a-b).join(", ")}`:""; const projects=d.projects?.size?` · 関連企画 ${[...d.projects].slice(0,4).map(safe).join("、")}`:""; const snippet=String(d.terms||"").slice(0,180); return `<article class="card"><h2>${safe(d.name)}</h2><p class="meta"><span class="badge">${safe(d.type)}</span><span class="badge">${safe(d.area)}</span>${safe(pages)}${safe(projects)}</p><p class="meta">${safe(snippet)}${d.terms?.length>180?"…":""}</p><div class="links"><a href="${safe(href)}" target="_blank" rel="noopener">資料を開く ↗</a></div></article>`;}).join(""):'<div class="empty">一致する資料はありません。</div>';
 }
-function syncManagementMode(){
-  const replacing=document.querySelector("#doc-mode").value==="replace";
-  const target=localDocuments.find(doc=>doc.id===document.querySelector("#replace-target").value);
-  document.querySelector("#replace-target-wrap").hidden=!replacing;
-  document.querySelector("#doc-type").disabled=replacing;
-  document.querySelector("#doc-area").disabled=replacing;
-  if(replacing&&target){document.querySelector("#doc-type").value=target.type;document.querySelector("#doc-area").value=target.area;}
-  document.querySelector("#upload-submit").textContent=replacing?"選んだ資料と差し替える":"この端末に追加";
-}
-function refreshManagementOptions(){
-  const options=localDocuments.map(doc=>`<option value="${safe(doc.id)}">${safe(doc.name)} · ${safe(doc.type)} · ${safe(doc.area)}</option>`).join("");
-  document.querySelector("#replace-target").innerHTML=options||'<option value="">差し替えできる資料はありません</option>';
-  document.querySelector("#delete-target").innerHTML=options||'<option value="">削除できる資料はありません</option>';
-  document.querySelector('#doc-mode option[value="replace"]').disabled=!localDocuments.length;
-  document.querySelector("#delete-target").disabled=!localDocuments.length;
-  document.querySelector("#delete-doc").disabled=!localDocuments.length;
-  syncManagementMode();
-}
-async function loadLocalDocuments() { try { localDocuments.forEach(d=>d.url&&URL.revokeObjectURL(d.url)); localDocuments.splice(0,localDocuments.length,...(await dbAction("readonly","getAll")).map(d=>({...d,local:true,url:URL.createObjectURL(d.blob)}))); } catch(e) { uploadStatus.textContent="端末保存を使えません。HTTPSで配布したアプリをインストールして開いてください。"; console.warn(e); } refreshManagementOptions(); renderDocuments(); }
+function slotDocuments(slot){return localDocuments.filter(doc=>doc.type===slot.type&&doc.area===slot.area);}
+function currentSlotDocument(slot){const documents=slotDocuments(slot);return documents.find(doc=>doc.id===`slot:${slot.id}`)||documents.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).at(0)||null;}
+function renderUploadSlots(){for(const slot of uploadSlots){const current=currentSlotDocument(slot);const statusNode=document.querySelector(`#slot-status-${slot.id}`);const label=document.querySelector(`label[for="slot-file-${slot.id}"]`);statusNode.textContent=current?`登録中：${current.name}`:"未登録";statusNode.title=current?.name||"この枠には資料が登録されていません";label.textContent=current?"差し替える":"PDFを選ぶ";}}
+async function removeObsoleteSlotDocuments(ids){if(!ids.length)return;for(const id of ids)await dbAction("readwrite","delete",id);const obsolete=new Set(ids);const saved=JSON.parse(localStorage.getItem(generatedStorageKey)||"[]").filter(record=>!(record.localReferences||[]).some(ref=>obsolete.has(ref.docId)));localStorage.setItem(generatedStorageKey,JSON.stringify(saved));state.records=state.records.filter(record=>!(record.localReferences||[]).some(ref=>obsolete.has(ref.docId)));}
+async function loadLocalDocuments() { try { localDocuments.forEach(d=>d.url&&URL.revokeObjectURL(d.url)); localDocuments.splice(0,localDocuments.length,...(await dbAction("readonly","getAll")).map(d=>({...d,local:true,url:URL.createObjectURL(d.blob)}))); } catch(e) { uploadStatus.textContent="端末保存を使えません。HTTPSで配布したアプリをインストールして開いてください。"; console.warn(e); } renderUploadSlots(); renderDocuments(); }
 function mergeGeneratedRecords(baseRecords) {
   try {
     const saved=JSON.parse(localStorage.getItem(generatedStorageKey)||"[]");
@@ -126,8 +104,6 @@ function mergeGeneratedRecords(baseRecords) {
 document.querySelector("#projects-tab").addEventListener("click",()=>{document.querySelector("#project-search").hidden=false;document.querySelector("#document-search").hidden=true;document.querySelector("#results").hidden=false;document.querySelector("#projects-tab").classList.add("active");document.querySelector("#documents-tab").classList.remove("active");});
 document.querySelector("#documents-tab").addEventListener("click",()=>{document.querySelector("#project-search").hidden=true;document.querySelector("#document-search").hidden=false;document.querySelector("#results").hidden=true;document.querySelector("#documents-tab").classList.add("active");document.querySelector("#projects-tab").classList.remove("active");loadLocalDocuments();renderDocuments();});
 document.querySelector("#doc-query").addEventListener("input",renderDocuments);
-document.querySelector("#doc-mode").addEventListener("change",syncManagementMode);
-document.querySelector("#replace-target").addEventListener("change",syncManagementMode);
 function renderImportReview(projects) {
   pendingProjectImport = projects;
   const review = document.querySelector("#import-review");
@@ -135,48 +111,35 @@ function renderImportReview(projects) {
   document.querySelector("#create-project-pages").textContent=pendingDocument?.replacing?"確認して資料を差し替え、企画ページを更新":"確認した内容で企画ページを作成";
   review.hidden = projects.length === 0;
 }
-document.querySelector("#upload-form").addEventListener("submit",async event=>{
-  event.preventDefault(); const file=document.querySelector("#doc-file").files[0]; if(!file)return;
-  const mode=document.querySelector("#doc-mode").value;
-  const existing=mode==="replace"?localDocuments.find(doc=>doc.id===document.querySelector("#replace-target").value):null;
-  if(mode==="replace"&&!existing){uploadStatus.textContent="差し替える資料を選んでください。";return;}
-  const type=existing?.type||document.querySelector("#doc-type").value;
-  const area=existing?.area||document.querySelector("#doc-area").value.trim()||"全エリア";
-  const extension=file.name.split(".").pop().toLowerCase();
-  if((type==="電力シート"||type==="配線図")&&extension!=="pdf"){uploadStatus.textContent="電力シートと配線図はPDFを選んでください。";return;}
-  if(type==="企画一覧"&&!(["xlsx","csv","txt","json"].includes(extension))){uploadStatus.textContent="企画一覧はExcel（.xlsx）、CSV、TXT、JSONのいずれかを選んでください。";return;}
-  const item={id:existing?.id||globalThis.crypto?.randomUUID?.()||`${Date.now()}-${file.name}`,name:file.name,type,area,terms:document.querySelector("#doc-terms").value,blob:file,local:true};
-  try {
-    let extracted=null, indexWarning="";
-    if(/\.pdf$/i.test(file.name)) {
-      uploadStatus.textContent="PDFをこの端末で読み取っています…";
-      const parser=await window.FestivalPdfImportReady;
-      if(!parser) throw new Error("PDFの読み取りにはHTTPSで開いたアプリが必要です。アプリをインストールして開いてください。");
-      const info=await parser.inspectPdf(file); item.pageCount=info.pageCount; item.terms=[item.terms,info.text].filter(Boolean).join(" ").trim();
-      if(item.type==="電力シート") {
-        extracted=await parser.extractPowerSheet(file);
-        if(!extracted.projects.length) throw new Error("企画情報のあるページを見つけられません。文字情報を含む電力シートPDFを選んでください。");
-        item.terms=[item.terms,...extracted.projects.map(p=>`${p.projectNumber} ${p.projectName} ${p.organization}`)].join(" ").trim();
-        extracted.projects.forEach(project=>{project.localReferences[0].docId=item.id;project.region=item.area;});
-        pendingDocument={item,replacing:Boolean(existing)};
-        renderImportReview(extracted.projects);
-        uploadStatus.textContent=`${extracted.projects.length}件の企画候補を読み取りました。内容を確認してページを作成してください。`;
-      } else {
-        if(existing&&!window.confirm(`「${existing.name}」を選んだファイルで差し替えます。よろしいですか？`))return;
-        await dbAction("readwrite","put",item);
-        uploadStatus.textContent=`${info.pageCount}ページのPDFをこの端末に登録しました。企画ページから関連する配線図も開けます。`;
-      }
-    } else {
-      if(file.name.toLowerCase().endsWith(".xlsx")){try{item.terms=`${item.terms} ${await xlsxText(file)}`.trim();}catch(e){indexWarning=" Excelの文字検索はこのブラウザーで使えないため、入力したキーワードだけが検索されます。";console.warn(e);}}
-      else if(!file.type.includes("pdf")&&/\.(csv|txt|json)$/i.test(file.name)){item.terms=`${item.terms} ${await file.text()}`.trim();}
-      if(existing&&!window.confirm(`「${existing.name}」を選んだファイルで差し替えます。よろしいですか？`))return;
-      await dbAction("readwrite","put",item);
-      uploadStatus.textContent=`この端末に${existing?"差し替えました":"登録しました"}。別の端末や利用者とは共有されません。${indexWarning}`;
+document.querySelectorAll(".slot-file-input").forEach(input=>input.addEventListener("change",async event=>{
+  const file=event.target.files[0];if(!file)return;
+  const slot=uploadSlots.find(item=>item.id===event.target.dataset.slot);if(!slot)return;
+  const existing=currentSlotDocument(slot);
+  const duplicates=slotDocuments(slot).filter(doc=>doc.id!==existing?.id).map(doc=>doc.id);
+  const item={id:existing?.id||`slot:${slot.id}`,name:file.name,type:slot.type,area:slot.area,terms:"",blob:file,local:true,updatedAt:Date.now()};
+  try{
+    if(!/\.pdf$/i.test(file.name))throw new Error("PDFファイルを選んでください。");
+    uploadStatus.textContent=`${slot.type}（${slot.area}）を読み取っています…`;
+    const parser=await window.FestivalPdfImportReady;
+    if(!parser)throw new Error("PDFの読み取りにはHTTPSで開いたアプリが必要です。");
+    const info=await parser.inspectPdf(file);item.pageCount=info.pageCount;item.terms=info.text;
+    if(slot.type==="電力シート"){
+      const extracted=await parser.extractPowerSheet(file);
+      if(!extracted.projects.length)throw new Error("企画情報のあるページが見つかりません。文字情報のある電力シートPDFを選んでください。");
+      if(extracted.projects.some(project=>project.area!==slot.areaKey))throw new Error(`このPDFには${slot.area}以外の企画も含まれています。該当する屋内／屋外の電力シートを選んでください。`);
+      item.terms=[item.terms,...extracted.projects.map(project=>`${project.projectNumber} ${project.projectName} ${project.organization}`)].join(" ").trim();
+      extracted.projects.forEach(project=>{project.localReferences[0].docId=item.id;project.region=slot.area;});
+      pendingDocument={item,slotId:slot.id,replacing:Boolean(existing),removeIds:duplicates};
+      renderImportReview(extracted.projects);
+      uploadStatus.textContent=`${extracted.projects.length}件の企画候補です。内容を確認し、上のボタンで登録してください。`;
+    }else{
+      if(existing&&!window.confirm(`「${existing.name}」を「${file.name}」に差し替えます。よろしいですか？`))return;
+      await dbAction("readwrite","put",item);await removeObsoleteSlotDocuments(duplicates);await loadLocalDocuments();
+      uploadStatus.textContent=`${slot.type}（${slot.area}）に「${file.name}」を${existing?"差し替えました":"登録しました"}。`;
     }
-    event.target.reset(); syncManagementMode(); if(!pendingDocument)await loadLocalDocuments();
-  } catch(e) { uploadStatus.textContent=`登録できませんでした：${e.message||"ブラウザーの保存容量または設定を確認してください"}`; console.error(e); }
-});
-document.querySelector("#create-project-pages").addEventListener("click",async()=>{
+  }catch(error){uploadStatus.textContent=`登録できませんでした：${error.message||"端末の保存領域を確認してください"}`;console.error(error);}
+  finally{event.target.value="";}
+}));document.querySelector("#create-project-pages").addEventListener("click",async()=>{
   if(!pendingDocument){uploadStatus.textContent="先に電力シートを選んでください。";return;}
   if(pendingDocument.replacing&&!window.confirm(`「${localDocuments.find(doc=>doc.id===pendingDocument.item.id)?.name||"登録済み資料"}」を選んだ電力シートに差し替え、企画ページを更新します。よろしいですか？`))return;
   const cards=[...document.querySelectorAll(".import-card")];
@@ -192,13 +155,14 @@ document.querySelector("#create-project-pages").addEventListener("click",async()
   try {
     const existing=JSON.parse(localStorage.getItem(generatedStorageKey)||"[]");
     const importedKeys=new Set(records.map(record=>`${record.area}|${record.projectNumber}`));
-    const docId=pendingDocument.item.id;
-    const retained=existing.filter(record=>!(record.localReferences||[]).some(ref=>ref.docId===docId)&&!importedKeys.has(`${record.area}|${record.projectNumber}`));
+    const docId=pendingDocument.item.id,obsoleteIds=new Set([docId,...pendingDocument.removeIds]);
+    const retained=existing.filter(record=>!(record.localReferences||[]).some(ref=>obsoleteIds.has(ref.docId))&&!importedKeys.has(`${record.area}|${record.projectNumber}`));
     const byId=new Map([...retained,...records].map(record=>[record.id,record]));
     const saved=[...byId.values()];
     await dbAction("readwrite","put",pendingDocument.item);
+    await removeObsoleteSlotDocuments(pendingDocument.removeIds);
     localStorage.setItem(generatedStorageKey,JSON.stringify(saved));
-    state.records=[...state.records.filter(record=>!(record.localReferences||[]).some(ref=>ref.docId===docId)&&!importedKeys.has(`${record.area}|${record.projectNumber}`)),...saved];
+    state.records=[...state.records.filter(record=>!(record.localReferences||[]).some(ref=>obsoleteIds.has(ref.docId))&&!importedKeys.has(`${record.area}|${record.projectNumber}`)),...saved];
     pendingDocument=null; pendingProjectImport=[];
     document.querySelector("#import-review").hidden=true;
     document.querySelector("#project-search").hidden=false; document.querySelector("#document-search").hidden=true; document.querySelector("#results").hidden=false;
@@ -209,12 +173,6 @@ document.querySelector("#create-project-pages").addEventListener("click",async()
   } catch(e) { uploadStatus.textContent="企画ページを保存できませんでした。端末の保存領域を確認してください。"; }
 });
 document.querySelector("#cancel-project-pages").addEventListener("click",()=>{pendingDocument=null;pendingProjectImport=[];document.querySelector("#import-review").hidden=true;uploadStatus.textContent="登録を取り消しました。端末内の資料は変更されていません。";});
-document.querySelector("#delete-doc").addEventListener("click",async()=>{
-  const id=document.querySelector("#delete-target").value,doc=localDocuments.find(item=>item.id===id);if(!doc)return;
-  if(!window.confirm(`「${doc.name}」をこの端末から削除しますか？この資料から作った企画ページも削除されます。`))return;
-  try{await dbAction("readwrite","delete",id);const saved=JSON.parse(localStorage.getItem(generatedStorageKey)||"[]").filter(record=>!(record.localReferences||[]).some(ref=>ref.docId===id));localStorage.setItem(generatedStorageKey,JSON.stringify(saved));state.records=state.records.filter(record=>!(record.localReferences||[]).some(ref=>ref.docId===id));uploadStatus.textContent=`「${doc.name}」と、その資料から作成した企画ページを削除しました。`;await loadLocalDocuments();render();}
-  catch(e){uploadStatus.textContent=`削除できませんでした：${e.message||"端末の保存領域を確認してください"}`;}
-});
 
 function safe(value) {
   return String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));

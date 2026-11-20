@@ -1,4 +1,4 @@
-const CACHE = "festival-search-v10";
+const CACHE = "festival-search-v12";
 const CORE_FILES = ["./", "./index.html", "./styles.css", "./app.js", "./pdf-import.js", "./vendor/pdfjs/pdf.min.js", "./vendor/pdfjs/pdf.worker.min.js", "./vendor/pdfjs/assets.json", "./manifest.webmanifest", "./icons/icon-180.png", "./icons/icon-192.png", "./icons/icon-512.png", "./data/data.json"];
 
 self.addEventListener("install", event => event.waitUntil((async () => {

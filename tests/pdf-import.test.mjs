@@ -4,6 +4,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 const root = path.resolve(import.meta.dirname, "..");
+const samplePdfRoot = path.resolve(root, "..", "sopo_search_system_test_samples", "data", "pdfs");
 globalThis.DOMMatrix ||= class {
   constructor(values = []) {
     [this.a, this.b, this.c, this.d, this.e, this.f] = [values[0] ?? 1, values[1] ?? 0, values[2] ?? 0, values[3] ?? 1, values[4] ?? 0, values[5] ?? 0];
@@ -18,17 +19,21 @@ globalThis.window = {};
 await import(pathToFileURL(path.join(root, "pdf-import.js")));
 const { extractPowerSheet } = await globalThis.window.FestivalPdfImportReady;
 
-for (const [area, filename, expectedCount] of [
-  ["indoor", "indoor-power-sheet.pdf", 22],
-  ["outdoor", "outdoor-power-sheet.pdf", 18]
-]) {
-  const file = new Blob([fs.readFileSync(path.join(root, "data", "pdfs", filename))]);
-  file.name = filename;
-  const result = await extractPowerSheet(file);
-  assert.equal(result.projects.length, expectedCount, `${area} project count`);
-  assert.ok(result.projects.every(project => project.projectNumber && project.projectName), `${area} records have names and IDs`);
-  assert.equal(new Set(result.projects.map(project => project.projectNumber)).size, expectedCount, `${area} project numbers are unique`);
-  assert.ok(result.projects.every(project => project.localReferences[0].pageEnd >= project.localReferences[0].pageStart), `${area} page ranges are valid`);
+const fixtures = [
+  ["indoor", "電力シート_屋内_1エリ.pdf", 22],
+  ["outdoor", "電力シート_屋外_1エリ.pdf", 18]
+];
+if (fixtures.every(([, filename]) => fs.existsSync(path.join(samplePdfRoot, filename)))) {
+  for (const [area, filename, expectedCount] of fixtures) {
+    const file = new Blob([fs.readFileSync(path.join(samplePdfRoot, filename))]);
+    file.name = filename;
+    const result = await extractPowerSheet(file);
+    assert.equal(result.projects.length, expectedCount, `${area} project count`);
+    assert.ok(result.projects.every(project => project.projectNumber && project.projectName), `${area} records have names and IDs`);
+    assert.equal(new Set(result.projects.map(project => project.projectNumber)).size, expectedCount, `${area} project numbers are unique`);
+    assert.ok(result.projects.every(project => project.localReferences[0].pageEnd >= project.localReferences[0].pageStart), `${area} page ranges are valid`);
+  }
+  console.log("PDF import sample checks passed (local fixtures)");
+} else {
+  console.log("PDF import sample checks skipped (local test sample folder not present)");
 }
-
-console.log("PDF import tests passed");
